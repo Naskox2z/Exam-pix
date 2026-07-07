@@ -150,9 +150,25 @@ function startExam(){
   clearInterval(state.timerId);
   state.timerId=setInterval(()=>{
     state.timeLeft--;
-    if(state.timeLeft<=0){ clearInterval(state.timerId); state.screen='end'; }
-    render();
+    if(state.timeLeft<=0){
+      clearInterval(state.timerId);
+      state.screen='end';
+      render();
+      return;
+    }
+    tickTimerDisplay(); // met à jour QUE le chiffre du chrono, touche pas au reste (sinon ça bousille le textarea pendant que tu tapes)
   },1000);
+}
+
+// met à jour uniquement l'affichage du chrono, sans re-render tout l'écran
+// (un render complet recrée le <textarea> à chaque fois, ce qui te vire le
+// focus/clavier en pleine frappe -- c'était le bug du "je peux pas écrire")
+function tickTimerDisplay(){
+  if(state.screen!=='exam') return;
+  const el=document.querySelector('.timer');
+  if(!el) return;
+  el.textContent=fmtTime(state.timeLeft);
+  el.classList.toggle('warn', state.timeLeft<300);
 }
 
 // ---------- écran : exam (consigne + éditeur + terminal) ----------
