@@ -70,7 +70,8 @@ button:focus-visible, textarea:focus-visible{outline:2px solid var(--cyan);outli
 .timer.warn{color:var(--err);animation:pulse 1s infinite;}
 @keyframes pulse{50%{opacity:.4;}}
 .progress-txt{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);}
-.exam-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+.exam-grid{display:grid;grid-template-columns:1fr;gap:14px;min-width:0;}
+.exam-grid > *{min-width:0;}
 @media(min-width:880px){ .exam-grid{grid-template-columns:1fr 1.3fr;} }
 
 .consigne{background:var(--panel);border:2px solid var(--panel2);border-radius:14px;padding:16px;}
@@ -79,7 +80,7 @@ button:focus-visible, textarea:focus-visible{outline:2px solid var(--cyan);outli
 .ex-name{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--cyan);}
 .ex-prompt{font-size:15px;line-height:1.55;margin-top:10px;color:var(--ink);}
 
-.editor-box{background:#120A28;border:2px solid var(--panel2);border-radius:14px;overflow:hidden;}
+.editor-box{background:#120A28;border:2px solid var(--panel2);border-radius:14px;overflow:hidden;min-width:0;}
 .tabs{display:flex;background:var(--panel2);}
 .tab{padding:9px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);background:transparent;border-right:1px solid #170F30;}
 .tab.active{background:#120A28;color:var(--cyan);border-bottom:2px solid var(--cyan);}
