@@ -1,4 +1,11 @@
-// server.go — minimal local server for the Simu Checkpoint app,
+// server.go -- petit serveur local pour faire marcher le bouton Run
+// (Anthropic demande une carte bancaire, Gemini non).
+//
+// Pour avoir une cle gratuite : https://aistudio.google.com/apikey
+// Pour lancer :
+//   export GEMINI_API_KEY=ta-cle
+//   go run server.go
+//   puis ouvre http://localhost:8080 (pas en double-cliquant index.html)
 
 package main
 
@@ -14,7 +21,7 @@ import (
 
 const geminiModel = "gemini-2.5-flash"
 
-// shape of the request app.js sends (mirrors the Anthropic Messages format)
+// ce que app.js envoie (format Anthropic Messages)
 type incomingRequest struct {
 	Messages []struct {
 		Role    string `json:"role"`
@@ -22,7 +29,7 @@ type incomingRequest struct {
 	} `json:"messages"`
 }
 
-// shape of Gemini's generateContent response (only the fields we need)
+// ce que Gemini renvoie (que les champs qu'on utilise)
 type geminiResponse struct {
 	Candidates []struct {
 		Content struct {
@@ -39,10 +46,10 @@ type geminiResponse struct {
 func main() {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		log.Fatal("GEMINI_API_KEY is not set. Get a free key (no credit card) at https://aistudio.google.com/apikey, then run: export GEMINI_API_KEY=your-key-here")
+		log.Fatal("GEMINI_API_KEY manquante. Cle gratuite ici : https://aistudio.google.com/apikey")
 	}
 
-	http.Handle("/", http.FileServer(http.Dir(".")))
+	http.Handle("/", http.FileServer(http.Dir("."))) // sert index.html/css/js tels quels
 
 	http.HandleFunc("/api/run", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -63,6 +70,7 @@ func main() {
 		}
 		promptText := incoming.Messages[0].Content
 
+		// on traduit la requete au format attendu par Gemini
 		geminiReqBody, _ := json.Marshal(map[string]interface{}{
 			"contents": []map[string]interface{}{
 				{"parts": []map[string]string{{"text": promptText}}},
@@ -76,7 +84,7 @@ func main() {
 			return
 		}
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("x-goog-api-key", apiKey)
+		req.Header.Set("x-goog-api-key", apiKey) // ta cle, jamais envoyee au navigateur
 
 		client := &http.Client{}
 		resp, err := client.Do(req)
@@ -93,7 +101,6 @@ func main() {
 
 		w.Header().Set("Content-Type", "application/json")
 
-		// if Gemini reported an error, forward it in the shape app.js checks for (data.error.message)
 		if parsed.Error.Message != "" || resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			msg := parsed.Error.Message
 			if msg == "" {
@@ -110,7 +117,7 @@ func main() {
 			text = parsed.Candidates[0].Content.Parts[0].Text
 		}
 
-		// reshape into the same {content: [{type, text}]} format app.js already parses
+		// on remet dans le format que app.js attend deja (meme forme qu'Anthropic)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"content": []map[string]string{{"type": "text", "text": text}},
 		})
