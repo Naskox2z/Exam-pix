@@ -96,6 +96,39 @@ async function loadLevelsFromSupabase(){
 }
 ```
 
-## Ce qui reste flou (honnêteté oblige)
+## Round 11 — adieu server.go, adieu Gemini côté toi
 
-Les tout premiers échanges (le tout premier prototype, avant les vrais exercices), je m'en souviens en gros mais pas au mot près — c'est loin dans la conversation. Le reste, à partir de "t'as trouvé z01exam.online", je le tiens précisément.
+Après Supabase pour les exercices, t'as voulu la même chose pour le compilo simulé : **une seule API dans ton code, Supabase, point.** Fini `server.go`, fini Render.
+
+Le déclic technique : le `server.go` existait à cause du CORS — le navigateur pouvait pas parler direct à Gemini/Anthropic depuis n'importe où. Mais Supabase, lui, est fait pour être appelé direct depuis un navigateur (CORS géré nativement). Du coup, la logique de `server.go` a juste déménagé dans une **Supabase Edge Function** (du TypeScript/Deno qui tourne chez Supabase, pas chez toi) :
+```ts
+// avant : server.go recevait la requete, appelait Gemini, renvoyait la reponse
+// maintenant : la meme logique, mais en Deno, hebergee par Supabase
+Deno.serve(async (req) => {
+  const { messages } = await req.json();
+  const geminiRes = await fetch(`https://generativelanguage.googleapis.com/...`, {...});
+  ...
+});
+```
+Testé en local avec Deno avant de te le donner (comme d'habitude) — la fonction contacte bien la vraie API Gemini.
+
+Résultat : `app.js` ne contient plus QUE l'URL Supabase. Gemini existe toujours (faut bien une IA quelque part pour simuler un compilo), mais il est caché dans l'Edge Function, jamais visible dans ton code à toi.
+
+Ça a aussi simplifié l'hébergement : plus besoin d'un serveur Go qui tourne en permanence (Render ou AlwaysData "User Program"), juste 4 fichiers statiques (`index.html`, `styles.css`, `data.js`, `script.js`) posés sur AlwaysData, point.
+
+## Round 12 — un VRAI compilo, plus une IA qui devine
+
+T'as demandé si l'IA-qui-simule pouvait être remplacée par du vrai code. Vérifié une piste (Piston, un vrai moteur d'exécution) mais leur API publique a fermé en février 2026. Du coup : écrire notre propre petit serveur Go qui fait tourner un vrai `go run .`
+
+```go
+cmd := exec.CommandContext(ctx, "go", "run", ".")
+cmd.Dir = tmpDir
+out, err := cmd.CombinedOutput()
+```
+Testé en vrai, immédiatement un bug surgit (que l'IA n'aurait jamais pu détecter, ironiquement) : les `main.go` version Piscine appellent `github.com/01-edu/z01`, un vrai paquet externe — le compilo essayait d'aller le chercher sur le réseau à chaque requête. Fix : je fournis une version locale du paquet (juste `PrintRune`, quelques lignes), plus besoin de réseau.
+
+Résultat : `app.js` a perdu tout son bloc de prompt-engineering ("réponds en 2 parties, la première ligne OK ou ERREUR...") — remplacé par un simple `fetch` qui renvoie `{isErr, text}` direct, plus rien à parser. Et la Supabase Edge Function (qui appelait Gemini) devient obsolète, plus besoin.
+
+## Ce qui reste flou (mise à jour)
+
+Toujours le tout premier prototype. Le reste, précis, mis à jour au fur et à mesure.
