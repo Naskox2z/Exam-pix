@@ -2,8 +2,44 @@
 // Principe : state = tout ce qui est vrai maintenant. render() regarde
 // state et regenere le HTML. Un clic change state, puis rappelle render().
 
+// cle publique "anon", pas un secret, la vraie protection c'est RLS sur Supabase
+const SUPABASE_URL = 'https://aigoivpdzcqhczhhbsos.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpZ29pdnBkemNxaGN6aGhic29zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2OTM3MjUsImV4cCI6MjA5OTI2OTcyNX0.EW9Jx6Pt1_lnLo67mXDN2cx70qQ6udznGFAvZNkv0RY';
+
+let LEVELS = []; // rempli par loadLevelsFromSupabase()
+
+async function loadLevelsFromSupabase(){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/exercises?select=*&order=id`, { // les 59 lignes de ta table
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+  });
+  const rows = await res.json();
+
+  const byLevel = {};
+  for(const row of rows){
+    const ex = { // renomme les colonnes snake_case en camelCase pour le reste du code
+      name: row.id,
+      title: row.title,
+      style: row.style,
+      html: row.html,
+      fnFile: row.fn_file,
+      stub: row.stub,
+      mainCursus: row.main_cursus,
+      mainPiscine: row.main_piscine,
+    };
+    (byLevel[row.level] ||= []).push(ex);
+  }
+
+  LEVELS = Object.keys(byLevel).sort((a,b)=>a-b).map(lvl => ({
+    id: 'n'+lvl,
+    name: 'N'+lvl,
+    topic: LEVEL_META[lvl].topic,
+    tagline: LEVEL_META[lvl].tagline,
+    exercises: byLevel[lvl],
+  }));
+}
+
 let state = {
-  screen:'select',       // 'select' | 'rules' | 'exam' | 'end'
+  screen:'loading',      // 'loading' | 'select' | 'rules' | 'exam' | 'end'
   category:'piscine',    // 'piscine' | 'cursus'
   mode:'practice',       // 'practice' | 'trueexam'
   lang:'en',
@@ -48,7 +84,8 @@ function localSyntaxCheck(code, fileName){
 function render(){
   const app=document.getElementById('app');
   let inner='';
-  if(state.screen==='select') inner=renderSelect();
+  if(state.screen==='loading') inner=renderLoading();
+  else if(state.screen==='select') inner=renderSelect();
   else if(state.screen==='rules') inner=renderRules();
   else if(state.screen==='exam') inner=renderExam();
   else if(state.screen==='end') inner=renderEnd();
@@ -69,6 +106,11 @@ function renderLangSwitch(){
     <button class="lang-btn ${state.lang==='en'?'active':''}" onclick="setLang('en')">EN</button>
     <button class="lang-btn ${state.lang==='fr'?'active':''}" onclick="setLang('fr')">FR</button>
   </div>`;
+}
+
+// petit ecran pendant qu'on va chercher les exos sur Supabase
+function renderLoading(){
+  return `<div class="sub" style="margin-top:40px;">Loading exercises...</div>`;
 }
 
 // ---- select ----
@@ -190,7 +232,7 @@ function renderExam(){
   const curCode = state.code[ex.name]!==undefined ? state.code[ex.name] : ex.stub;
   const out = state.termOut[ex.name];
   const subOut = state.submitOut[ex.name];
-  const hasMain = ex.style==='function' && ex.mainCode;
+  const hasMain = ex.style==='function' && ex.mainCursus;
 
   let outHtml;
   if(state.running){
@@ -220,7 +262,7 @@ function renderExam(){
     </div>` : `
     <div class="tabs"><button class="tab active">${ex.fnFile}</button></div>`;
 
-  const displayMain = ex.mainCode; // pareil piscine/cursus, fmt permis dans les deux
+  const displayMain = (state.category==='piscine' && ex.mainPiscine) ? ex.mainPiscine : ex.mainCursus;
   const editorHtml = (hasMain && state.activeTab==='main')
     ? `<pre class="code">${esc(displayMain)}</pre>`
     : `<textarea id="codearea" class="code" spellcheck="false">${esc(curCode)}</textarea>`;
@@ -305,8 +347,8 @@ async function compileAndCheck(ex, studentCode){
   const localErr = localSyntaxCheck(studentCode, ex.fnFile);
   if(localErr) return { text: localErr, isErr:true, funny: randomFrom(FAIL_MSGS.syntax[state.lang]) };
 
-  const isFn = ex.style==='function' && ex.mainCode;
-  const mainForRun = ex.mainCode;
+  const isFn = ex.style==='function' && ex.mainCursus;
+  const mainForRun = (state.category==='piscine' && ex.mainPiscine) ? ex.mainPiscine : ex.mainCursus;
   const context = isFn
     ? `Contexte : ${ex.fnFile} est dans un package "piscine" (dossier séparé), et main.go est dans le package main, qui fait \`import "piscine"\` et appelle les fonctions exportées via \`piscine.NomFonction(...)\`. Considère que le module Go (go.mod) est correctement configuré -- ne signale JAMAIS d'erreur du style "found packages main and piscine in same directory".\n\n--- FICHIER: ${ex.fnFile} (package piscine) ---\n${studentCode}\n\n--- FICHIER: main.go (package main) ---\n${mainForRun}`
     : `Contexte : un seul fichier, package main, exécuté avec \`go run .\` (peut recevoir des arguments en ligne de commande selon l'énoncé).\n\n--- FICHIER: main.go (package main) ---\n${studentCode}`;
@@ -367,14 +409,13 @@ async function submitCode(){
 
 // essaie l'appel direct (marche seul sur Claude.ai) puis /api/run en secours
 async function callCompiler(prompt){
-  const payload=JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1200, messages:[{role:"user", content:prompt}] });
-  try{
-    const r=await fetch("https://api.anthropic.com/v1/messages", { method:"POST", headers:{"Content-Type":"application/json"}, body:payload }); // marche tout seul sur Claude.ai
-    return await r.json();
-  }catch(directErr){
-    const r2=await fetch("/api/run", { method:"POST", headers:{"Content-Type":"application/json"}, body:payload }); // ton serveur local, si t'en as un
-    return await r2.json();
-  }
+  const payload = JSON.stringify({ messages: [{ role: "user", content: prompt }] });
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/compile`, { // une seule API, Supabase, plus Gemini/Render a gerer a part
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    body: payload,
+  });
+  return await res.json();
 }
 
 // ---- end ----
@@ -392,4 +433,7 @@ function renderEnd(){
   `;
 }
 
-render();
+render(); // affiche l'ecran de chargement
+loadLevelsFromSupabase() // puis on va chercher les vrais exos avant d'afficher select
+  .then(() => { state.screen='select'; render(); })
+  .catch(() => { document.getElementById('app').innerHTML = '<div class="sub">Could not load exercises. Check your connection and reload the page.</div>'; });
