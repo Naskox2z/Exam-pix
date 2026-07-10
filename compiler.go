@@ -29,7 +29,7 @@ type compileResponse struct {
 }
 
 func main() {
-	http.HandleFunc("/compile", handleCompile)
+	http.HandleFunc("/", handleCompile) // repond sur n'importe quel chemin, plus sur avec le routage par chemin d'AlwaysData
 
 	ip := os.Getenv("IP")
 	port := os.Getenv("PORT")

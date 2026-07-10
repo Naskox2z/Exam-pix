@@ -5,7 +5,7 @@
 // cle publique "anon", pas un secret, la vraie protection c'est RLS sur Supabase
 const SUPABASE_URL = 'https://aigoivpdzcqhczhhbsos.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpZ29pdnBkemNxaGN6aGhic29zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2OTM3MjUsImV4cCI6MjA5OTI2OTcyNX0.EW9Jx6Pt1_lnLo67mXDN2cx70qQ6udznGFAvZNkv0RY';
-const COMPILER_URL = 'https://REMPLACE-MOI.alwaysdata.net'; // l'adresse du site "User Program" ou tourne compiler.go
+const COMPILER_URL = 'https://simu-checkpoint.alwaysdata.net/compiler';
 
 let LEVELS = []; // rempli par loadLevelsFromSupabase()
 
@@ -352,7 +352,7 @@ async function compileAndCheck(ex, studentCode){
   const mainForRun = (state.category==='piscine' && ex.mainPiscine) ? ex.mainPiscine : ex.mainCursus;
 
   try{
-    const res = await fetch(`${COMPILER_URL}/compile`, {
+    const res = await fetch(COMPILER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fnFile: ex.fnFile, studentCode, mainCode: mainForRun, isFunction: !!isFn }),
