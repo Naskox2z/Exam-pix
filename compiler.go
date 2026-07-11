@@ -36,6 +36,9 @@ func main() {
 	if port == "" {
 		port = "8081"
 	}
+	if strings.Contains(ip, ":") { // adresse IPv6 (ex: "::") -- doit etre entre crochets pour un host:port valide
+		ip = "[" + ip + "]"
+	}
 	addr := ip + ":" + port
 	fmt.Println("✅ Compiler server listening on " + addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {
