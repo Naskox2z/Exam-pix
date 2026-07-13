@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<!-- index.html -- GRIND.GO, le compagnon arcade du Simu Checkpoint.
+     Meme squelette que le reste : #app vide, tout genere par app.js. -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRIND.GO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0F0B14; --panel:#1B1420; --panel2:#251B2C;
+  --coral:#FF4D6D; --gold:#FFC857; --teal:#3ECFB2;
+  --ink:#F5EFEA; --dim:#B4A6B8; --err:#FF6B6B;
+  --xp:#8B5CF6;
+}
+*{box-sizing:border-box;}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;min-height:100%;}
+body{
+  background:#050308;
+  color:var(--ink); font-family:'Inter',sans-serif; min-height:100vh;
+  -webkit-font-smoothing:antialiased; position:relative;
+  padding:14px 12px 40px;
+}
+/* ---- la borne d'arcade : un cadre epais autour de l'ecran, comme une vraie machine ---- */
+.cabinet{
+  width:100%; max-width:460px; margin:0 auto; box-sizing:border-box;
+  background:linear-gradient(160deg, #2b2038, #150e1e 60%);
+  border-radius:22px;
+  padding:14px 14px 22px;
+  box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.06);
+  border:1px solid #3a2d4d;
+}
+.cabinet-marquee{
+  text-align:center; font-family:'Press Start 2P',monospace; font-size:9px;
+  color:var(--gold); letter-spacing:.1em; padding-bottom:10px;
+  text-shadow:0 0 10px rgba(255,200,87,.5);
+}
+.screen{
+  background:radial-gradient(1100px 700px at 50% -8%, #2A1830 0%, var(--bg) 55%);
+  border-radius:10px; padding:16px 16px 30px;
+  position:relative; overflow:hidden;
+  box-shadow:inset 0 0 40px rgba(0,0,0,.6), inset 0 0 2px #000;
+}
+/* scanlines + leger vignettage, l'ecran de l'intérieur de la borne */
+.screen::after{
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:999;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0px, rgba(0,0,0,.14) 1px, transparent 1px, transparent 3px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.45) 100%);
+  border-radius:10px;
+}
+.wrap{max-width:640px;margin:0 auto;position:relative;z-index:1;}
+/* petite bande "damier de course" -- clin d'oeil Sugar Rush, discrete */
+.race-stripe{
+  height:6px; margin:10px 0 0;
+  background-image:repeating-linear-gradient(45deg, var(--gold) 0 8px, transparent 8px 16px, var(--coral) 16px 24px, transparent 24px 32px);
+  opacity:.55; border-radius:3px;
+}
+.pixel-font{font-family:'Press Start 2P',monospace;} /* juste pour les accents, jamais du texte long */
+.mono{font-family:'JetBrains Mono',monospace;}
+button{font-family:inherit;cursor:pointer;border:none;}
+button:focus-visible, input:focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+button:active{transform:translateY(1px);} /* petit "clic" façon bouton arcade */
+
+/* ---- panneau "pixel" : coins coupes en escalier, genre fenetre de dialogue RPG ---- */
+.pixel-panel{
+  clip-path:polygon(
+    0 10px, 10px 10px, 10px 0,
+    calc(100% - 10px) 0, calc(100% - 10px) 10px, 100% 10px,
+    100% calc(100% - 10px), calc(100% - 10px) calc(100% - 10px), calc(100% - 10px) 100%,
+    10px 100%, 10px calc(100% - 10px), 0 calc(100% - 10px)
+  );
+}
+
+.eyebrow{font-family:'Press Start 2P',monospace;font-size:9px;letter-spacing:.05em;color:var(--teal);}
+.title{font-family:'Press Start 2P',monospace;font-size:22px;margin-top:12px;line-height:1.4;position:relative;}
+.sub{font-size:13px;color:var(--dim);margin-top:10px;line-height:1.6;font-style:italic;}
+
+/* petit glitch a la Vanellope -- se joue une fois au chargement, et a chaque level up */
+@keyframes glitchTitle{
+  0%, 100% { transform:translate(0,0); text-shadow:none; }
+  20% { transform:translate(-2px,1px); text-shadow:2px 0 var(--coral), -2px 0 var(--teal); }
+  40% { transform:translate(2px,-1px); text-shadow:-2px 0 var(--gold), 2px 0 var(--xp); }
+  60% { transform:translate(-1px,0); text-shadow:1px 0 var(--coral); }
+  80% { transform:translate(1px,1px); text-shadow:none; }
+}
+.title.glitching{ animation:glitchTitle .35s steps(2) 2; }
+
+/* ---- HUD ---- */
+.hud{display:flex;align-items:center;gap:12px;margin-top:18px;background:var(--panel);border:2px solid var(--panel2);padding:14px 16px;}
+.hud-level{
+  flex-shrink:0;width:48px;height:48px;
+  clip-path:polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background:linear-gradient(135deg, var(--xp), #C084FC);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Press Start 2P',monospace;font-size:11px;color:#fff;
+}
+.hud-mid{flex:1;min-width:0;}
+.hud-rank{font-family:'Fraunces',serif;font-weight:600;font-size:14px;color:var(--ink);}
+.hud-xp-bar{height:9px;background:var(--panel2);margin-top:6px;overflow:hidden;border:1px solid #000;}
+.hud-xp-fill{height:100%;background:repeating-linear-gradient(90deg, var(--xp) 0 6px, #C084FC 6px 12px);transition:width .4s ease;}
+.hud-xp-txt{font-size:10px;color:var(--dim);margin-top:4px;font-family:'JetBrains Mono',monospace;}
+.hud-streak{flex-shrink:0;text-align:center;font-family:'JetBrains Mono',monospace;}
+.hud-streak-n{font-size:18px;font-weight:700;color:var(--gold);}
+.hud-streak-lbl{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;}
+
+/* ---- level up : le gros moment, distinct du petit toast de trophee ---- */
+@keyframes levelUpIn{0%{transform:scale(.7) rotate(-3deg);opacity:0;}60%{transform:scale(1.05) rotate(1deg);opacity:1;}100%{transform:scale(1) rotate(0);}}
+.levelup-banner{
+  margin-top:12px;background:linear-gradient(135deg, var(--xp), var(--coral));
+  padding:16px;text-align:center;animation:levelUpIn .5s cubic-bezier(.2,.8,.3,1);
+}
+.levelup-banner .big{font-family:'Press Start 2P',monospace;font-size:16px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.3);}
+.levelup-banner .sm{font-size:12px;color:rgba(255,255,255,.85);margin-top:6px;}
+
+@keyframes toastIn{0%{transform:translateY(-16px) scale(.9);opacity:0;}100%{transform:translateY(0) scale(1);opacity:1;}}
+.achievement-toast{
+  margin-top:10px;background:linear-gradient(135deg, rgba(255,200,87,.15), rgba(255,77,109,.1));
+  border:2px solid var(--gold);padding:12px 16px;
+  animation:toastIn .3s cubic-bezier(.2,.8,.3,1);display:flex;align-items:center;gap:10px;
+}
+.achievement-toast .ico{font-size:22px;}
+.achievement-toast .txt{font-size:13px;}
+.achievement-toast .txt b{color:var(--gold);display:block;font-family:'Fraunces',serif;font-size:14px;}
+
+.mode-switch{display:flex;gap:8px;margin-top:14px;}
+.mode-btn{flex:1;padding:12px;background:var(--panel);border:2px solid var(--panel2);color:var(--dim);font-size:13px;font-weight:600;}
+.mode-btn.active{background:linear-gradient(135deg, var(--coral), #ff7a92);color:#1a0d10;border-color:var(--coral);}
+
+/* ---- gym ---- */
+.card{background:var(--panel);border:2px solid var(--panel2);padding:20px;margin-top:14px;}
+.gym-progress{font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace;margin-bottom:10px;}
+.gym-code{background:#0C0812;padding:16px;font-family:'JetBrains Mono',monospace;font-size:14.5px;line-height:1.7;color:#E4DBE8;white-space:pre-wrap;margin:12px 0;border:1px solid #000;}
+.gym-blank{color:var(--gold);font-weight:700;}
+.gym-input-row{display:flex;gap:8px;margin-top:10px;}
+.gym-input{flex:1;background:#0C0812;border:2px solid var(--panel2);padding:11px 14px;color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:14px;}
+.gym-check{background:var(--teal);color:#0A0710;font-weight:700;padding:11px 18px;font-size:13px;}
+@keyframes popIn{0%{transform:scale(.92);opacity:0;}100%{transform:scale(1);opacity:1;}}
+@keyframes shake{10%,90%{transform:translateX(-2px);}20%,80%{transform:translateX(3px);}30%,50%,70%{transform:translateX(-5px);}40%,60%{transform:translateX(5px);}}
+.gym-feedback{margin-top:12px;padding:12px 14px;font-size:14px;animation:popIn .2s ease;}
+.gym-feedback.ok{background:rgba(62,207,178,.12);border:2px solid rgba(62,207,178,.4);color:var(--teal);}
+.gym-feedback.ko{background:rgba(255,107,107,.12);border:2px solid rgba(255,107,107,.4);color:var(--err);animation:popIn .2s ease, shake .4s ease;}
+.gym-xp-gain{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--xp);font-size:12px;margin-left:8px;}
+.gym-explain{margin-top:8px;font-size:13px;color:var(--ink);line-height:1.5;}
+.gym-next{margin-top:12px;width:100%;padding:12px;background:var(--panel2);color:var(--ink);font-weight:600;font-size:13px;}
+.hint-btn{background:none;color:var(--dim);font-size:12px;text-decoration:underline;margin-top:8px;}
+
+/* ---- flashcards ---- */
+.deck-filter{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;}
+.chip{padding:6px 12px;background:var(--panel2);border:1.5px solid transparent;color:var(--dim);font-size:11.5px;}
+.chip.active{background:var(--gold);color:#1a0d10;font-weight:700;}
+
+.flashcard-zone{margin-top:16px;perspective:1200px;}
+.flashcard{min-height:220px;position:relative;cursor:pointer;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.8,.3,1);}
+.flashcard.flipped{transform:rotateY(180deg);}
+.fc-face{position:absolute;inset:0;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;backface-visibility:hidden;background:var(--panel);border:2px solid var(--panel2);}
+.fc-front .fc-label{font-size:10px;color:var(--teal);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;}
+.fc-front .fc-q{font-family:'Fraunces',serif;font-size:20px;font-weight:600;}
+.fc-back{transform:rotateY(180deg);background:var(--panel2);}
+.fc-back .fc-label{font-size:10px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;}
+.fc-back .fc-a{font-size:14.5px;line-height:1.6;}
+.fc-tap-hint{margin-top:10px;font-size:11px;color:var(--dim);}
+
+.deck-nav{display:flex;gap:10px;margin-top:16px;}
+.deck-btn{flex:1;padding:12px;background:var(--panel);color:var(--ink);font-size:13px;border:2px solid var(--panel2);}
+.deck-btn:disabled{opacity:.3;}
+.deck-count{text-align:center;font-size:11px;color:var(--dim);margin-top:10px;font-family:'JetBrains Mono',monospace;}
+
+.trophy-btn{background:none;color:var(--gold);font-size:12px;margin-top:10px;text-decoration:underline;}
+.trophy-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.trophy{background:var(--panel2);padding:10px;text-align:center;opacity:.35;}
+.trophy.unlocked{opacity:1;border:1px solid var(--gold);}
+.trophy .ico{font-size:20px;}
+.trophy .name{font-size:10.5px;margin-top:4px;color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+// data.js -- que du contenu, zero logique (voir app.js)
+
+const OK_LINES = [
+  "Clean. Aucune note.",
+  "Ça compile dans ta tête, joli.",
+  "Direct au but.",
+  "Exactement ça.",
+  "Le compilo sourit (façon de parler).",
+];
+const KO_LINES = [
+  "Le compilo fronce les sourcils.",
+  "Presque. Enfin non. Mais l'intention y était.",
+  "Ton code, mais dans le mauvais univers.",
+  "C'était pas ça (mais on t'aime quand même).",
+  "Nope. Retente, le stagiaire en toi progresse.",
+];
+
+const RANKS = [
+  { xp: 0,   title: "Stagiaire" },
+  { xp: 50,  title: "Junior" },
+  { xp: 120, title: "Confirmé" },
+  { xp: 220, title: "Senior" },
+  { xp: 350, title: "Tech Lead" },
+  { xp: 500, title: "Architecte" },
+];
+
+const ACHIEVEMENTS = [
+  { id:"first_correct", ico:"🎉", name:"Premier commit",           desc:"Ta première bonne réponse." },
+  { id:"streak_5",      ico:"🔥", name:"Hot streak",                desc:"5 bonnes réponses d'affilée." },
+  { id:"streak_10",     ico:"🚀", name:"Touche pas, ça chauffe",     desc:"10 bonnes réponses d'affilée." },
+  { id:"gym_complete",  ico:"🏆", name:"Plus un seul blank à toi",   desc:"Les 14 défis réussis au moins une fois." },
+  { id:"cards_10",      ico:"📚", name:"Tu fouilles",                desc:"10 flashcards différentes consultées." },
+  { id:"cards_all",     ico:"🧠", name:"Encyclopédie vivante",       desc:"Toutes les flashcards consultées." },
+];
+
+const GYM = [
+  {
+    code: "x ___ 5\nfmt.Println(x)",
+    answers: [":="],
+    hint: "Le symbole qui cree la variable ET lui donne une valeur en meme temps.",
+    explain: "`:=` cree la variable et lui donne une valeur en une seule ligne -- pas besoin d'ecrire le type, Go le devine tout seul (ici, un nombre entier).",
+  },
+  {
+    code: "for i ___ 0; i < 5; i++ {\n\tfmt.Println(i)\n}",
+    answers: [":="],
+    hint: "Meme symbole que le premier -- une boucle for a 3 parties.",
+    explain: "Une boucle for classique : on part de `i := 0`, on continue tant que `i < 5`, et on ajoute 1 a chaque tour (`i++`).",
+  },
+  {
+    code: "for _, r := ___ s {\n\tfmt.Println(r)\n}",
+    answers: ["range"],
+    hint: "Le mot qui permet de parcourir une string, une liste, ou un dictionnaire.",
+    explain: "`range` parcourt un par un les caracteres d'une string, ou les elements d'une liste/dictionnaire.",
+  },
+  {
+    code: "if x > 0 {\n\tfmt.Println(\"positif\")\n} ___ {\n\tfmt.Println(\"negatif ou zero\")\n}",
+    answers: ["else"],
+    hint: "Le mot pour le cas ou la condition du if est fausse.",
+    explain: "`else` s'execute quand la condition du `if` est fausse.",
+  },
+  {
+    code: "func Double(n int) ___ {\n\treturn n * 2\n}",
+    answers: ["int"],
+    hint: "Ce que renvoie `return n * 2`, c'est quel genre de valeur ?",
+    explain: "Ce qu'on ecrit apres les parentheses des arguments, c'est ce que la fonction va renvoyer.",
+  },
+  {
+    code: "s := ___int{1, 2, 3}",
+    answers: ["[]"],
+    hint: "Deux crochets, sans rien entre eux (contrairement a une liste de taille fixe).",
+    explain: "`[]int` = une liste de nombres entiers qui peut grandir ou retrecir. Sans nombre entre les crochets, contrairement a une liste de taille fixe (`[3]int`).",
+  },
+  {
+    code: "if r >= 'a' && r ___ 'z' {\n\tfmt.Println(\"minuscule\")\n}",
+    answers: ["<="],
+    hint: "Le caractere doit etre entre 'a' et 'z' inclus.",
+    explain: "Pour verifier qu'un caractere est dans un intervalle, on combine deux comparaisons avec `&&`.",
+  },
+  {
+    code: "n := int(r - ___)",
+    answers: ["'0'"],
+    hint: "Le caractere du chiffre zero.",
+    explain: "Un caractere-chiffre moins le caractere `'0'` donne sa valeur en nombre (ex: `'7' - '0'` = 7).",
+  },
+  {
+    code: "s := []int{1, 2}\ns = ___(s, 3)",
+    answers: ["append"],
+    hint: "Le mot qui ajoute un element a une liste.",
+    explain: "`append` ajoute un element a la fin d'une liste et renvoie la liste mise a jour -- il faut toujours la recuperer (`s = append(s, ...)`).",
+  },
+  {
+    code: "if len(s) ___ 0 {\n\tfmt.Println(\"string vide\")\n}",
+    answers: ["=="],
+    hint: "Le symbole d'egalite (pas celui qui donne une valeur).",
+    explain: "`==` compare deux valeurs. `=` (un seul signe) sert a donner une valeur, pas a comparer.",
+  },
+  {
+    code: "for _, r := range s {\n\tfmt.Print(___(r))\n}",
+    answers: ["string"],
+    hint: "Le mot qui transforme UN caractere en texte.",
+    explain: "`string(r)` transforme un seul caractere en texte d'une seule lettre.",
+  },
+  {
+    code: "m := ___[string]int{}",
+    answers: ["map"],
+    hint: "Le mot pour un dictionnaire cle/valeur.",
+    explain: "`map[string]int` = un dictionnaire qui associe des mots a des nombres.",
+  },
+  {
+    code: "func DivMod(a, b int) (int, ___) {\n\treturn a / b, a % b\n}",
+    answers: ["int"],
+    hint: "Le genre de valeur que donne le reste d'une division (a % b).",
+    explain: "En Go, une fonction peut renvoyer plusieurs resultats -- on liste tous les types entre parentheses.",
+  },
+  {
+    code: "q, r ___ DivMod(17, 5)",
+    answers: [":="],
+    hint: "Meme symbole que pour creer une variable normale.",
+    explain: "On peut creer plusieurs variables d'un coup avec `:=`, une par resultat renvoye.",
+  },
+];
+
+const FLASHCARDS = [
+  { cat:"bases", q:"rune vs byte, c'est quoi la difference ?",
+    a:"Un byte, c'est un petit bloc de 8 bits (un nombre de 0 a 255). Un rune, c'est un caractere (une lettre, un chiffre, un emoji...), qui peut prendre plusieurs bytes. Si tu decoupes une string avec `range`, tu recuperes des runes. Avec `s[i]`, tu recuperes des bytes -- et ca peut couper un caractere accentue en deux." },
+  { cat:"bases", q:":= vs var, quelle difference ?",
+    a:"`:=` cree la variable et lui donne une valeur en une ligne, Go devine le type tout seul. `var` sert quand tu veux dire le type toi-meme, ou creer la variable sans lui donner de valeur tout de suite." },
+  { cat:"bases", q:"slice vs array ?",
+    a:"Une liste de taille fixe (array) a un nombre de cases fige dans son type ([3]int et [5]int sont deux types differents). Un slice ([]int) peut grandir ou retrecir avec append. En pratique, on utilise presque toujours des slices." },
+  { cat:"bases", q:"range sur une string, ca donne quoi exactement ?",
+    a:"Deux choses : la position en octets du debut du caractere (pas juste \"le 3eme caractere\"), et le caractere lui-meme." },
+  { cat:"bases", q:"Pourquoi reassigner s = append(s, x) ?",
+    a:"append peut avoir besoin de creer une nouvelle liste en memoire si l'ancienne est pleine. Du coup il faut toujours recuperer ce qu'il renvoie." },
+  { cat:"bases", q:"Pourquoi Go n'a pas de while ?",
+    a:"Go n'a qu'un seul mot pour les boucles : `for`. Ecrit sans les 3 parties (juste `for condition {}`), ca fait exactement un while." },
+  { cat:"fonctions", q:"func f() (int, error) -- pourquoi error en 2eme retour ?",
+    a:"En Go, on fait souvent comme ca : la derniere valeur renvoyee par une fonction est une erreur (nil si tout va bien). Juste apres l'appel, on verifie : `if err != nil { ... }`." },
+  { cat:"fonctions", q:"nil slice vs slice vide []int{}, une difference ?",
+    a:"Une liste nil (`var s []int`) n'a pas encore de memoire reservee. Une liste vide (`[]int{}`) en a, mais avec zero element dedans. `len()` et `range` marchent pareil sur les deux -- la difference compte surtout si tu compares avec `nil`." },
+  { cat:"intermediaire", q:"* et &, c'est quoi ?",
+    a:"`&` donne l'adresse en memoire d'une variable. `*` devant un type dit \"une adresse vers ce type\" (`*int`). `*` devant une variable-adresse va chercher la vraie valeur qu'elle pointe." },
+  { cat:"intermediaire", q:"interface{} ou any, ca veut dire quoi ?",
+    a:"Un type qui accepte n'importe quelle sorte de valeur -- utile pour ecrire une fonction qui marche avec plusieurs types differents. `any` c'est juste un autre nom, plus simple, pour `interface{}` depuis Go 1.18." },
+  { cat:"intermediaire", q:"iota, a quoi ca sert ?",
+    a:"Un compteur qui s'incremente tout seul dans un bloc `const`, ligne apres ligne -- pratique pour numeroter des constantes sans ecrire 0, 1, 2... a la main." },
+  { cat:"intermediaire", q:"struct, c'est quoi le concept ?",
+    a:"Un type qui regroupe plusieurs informations ensemble (comme une fiche). `type Point struct { X, Y int }` -- pas de classes en Go, mais des structs, avec des fonctions qu'on peut y attacher." },
+  { cat:"avance", q:"goroutine, en une phrase ?",
+    a:"Une fonction lancee avec `go` qui tourne en meme temps que le reste du programme, sans le bloquer." },
+  { cat:"avance", q:"channel (chan), ca sert a quoi ?",
+    a:"Un tuyau pour faire parler deux bouts de programme qui tournent en meme temps -- l'un y met une valeur (`ch <- v`), l'autre la recupere (`v := <-ch`)." },
+  { cat:"avance", q:"panic / recover, c'est quoi ?",
+    a:"`panic` arrete le programme tout de suite (erreur grave). `recover`, avec `defer`, permet de rattraper ce panic avant que tout plante -- a utiliser rarement, pas comme un filet de securite systematique." },
+];
+
+// app.js -- logique. Deux modes (gym/cards) + un systeme d'XP/rang/trophees
+// commun aux deux, pour que ca ait un vrai feel de jeu video.
+
+let state = {
+  mode: 'gym',
+  gymIdx: 0, gymAnswered: false, gymCorrect: false,
+  gymOrder: shuffledIndices(GYM.length),
+  cardCat: 'all', cardIdx: 0, flipped: false,
+  cardOrder: shuffledIndices(FLASHCARDS.length),
+
+  xp: 0, streak: 0, bestStreak: 0, leveledUp: null, glitching: false,
+  solvedGym: new Set(),      // index des defis deja reussis au moins une fois
+  flippedCards: new Set(),  // index des flashcards deja retournees
+  unlocked: new Set(),      // id des trophees debloques
+  toast: null,              // dernier trophee debloque, affiche puis efface
+  showTrophies: false,
+};
+
+function shuffledIndices(n){
+  const arr = Array.from({length:n}, (_,i)=>i);
+  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  return arr;
+}
+function randomFrom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+// ---------------- niveau / rang, calcule depuis l'xp total ----------------
+function rankFor(xp){
+  let current = RANKS[0];
+  for(const r of RANKS){ if(xp >= r.xp) current = r; }
+  return current;
+}
+function levelFor(xp){ return RANKS.filter(r => xp >= r.xp).length; } // 1 a 6
+function nextRankXp(xp){
+  const idx = RANKS.findIndex(r => xp < r.xp);
+  return idx === -1 ? null : RANKS[idx].xp; // null = rang max atteint
+}
+
+function gainXp(n){
+  const beforeLevel = levelFor(state.xp);
+  state.xp += n;
+  const afterLevel = levelFor(state.xp);
+  if(afterLevel > beforeLevel){
+    state.leveledUp = RANKS[afterLevel-1].title; // affiche une banniere, distincte du petit toast trophee
+    state.glitching = true;
+    setTimeout(() => { state.leveledUp = null; state.glitching = false; render(); }, 3000);
+  }
+  checkAchievements();
+}
+
+function unlock(id){
+  if(state.unlocked.has(id)) return;
+  state.unlocked.add(id);
+  state.toast = ACHIEVEMENTS.find(a => a.id === id);
+  setTimeout(() => { state.toast = null; render(); }, 3500); // le toast disparait tout seul
+}
+
+function checkAchievements(){
+  if(state.solvedGym.size >= 1) unlock('first_correct');
+  if(state.streak >= 5) unlock('streak_5');
+  if(state.streak >= 10) unlock('streak_10');
+  if(state.solvedGym.size >= GYM.length) unlock('gym_complete');
+  if(state.flippedCards.size >= 10) unlock('cards_10');
+  if(state.flippedCards.size >= FLASHCARDS.length) unlock('cards_all');
+}
+
+// ---------------- rendu principal ----------------
+function render(){
+  const app = document.getElementById('app');
+  const rank = rankFor(state.xp);
+  const level = levelFor(state.xp);
+  const nextXp = nextRankXp(state.xp);
+  const pctToNext = nextXp ? Math.round(((state.xp - rank.xp) / (nextXp - rank.xp)) * 100) : 100;
+
+  app.innerHTML = `
+    <div class="cabinet">
+      <div class="cabinet-marquee">◆ ZONE01 ARCADE ◆</div>
+      <div class="screen"><div class="wrap">
+    <div class="eyebrow">SIMU CHECKPOINT · ARCADE</div>
+    <div class="title ${state.glitching?'glitching':''}" id="mainTitle">GRIND.GO</div>
+    <div class="race-stripe"></div>
+    <div class="sub">Grind ta syntaxe, level up tes réflexes. (Le vrai exam, lui, n'a pas de checkpoint.)</div>
+
+    <div class="hud">
+      <div class="hud-level">Lv${level}</div>
+      <div class="hud-mid">
+        <div class="hud-rank">${rank.title}</div>
+        <div class="hud-xp-bar"><div class="hud-xp-fill" style="width:${pctToNext}%"></div></div>
+        <div class="hud-xp-txt">${state.xp} XP${nextXp ? ' · ' + (nextXp - state.xp) + ' avant ' + RANKS[RANKS.indexOf(rank)+1].title : ' · rang max'}</div>
+      </div>
+      <div class="hud-streak">
+        <div class="hud-streak-n">🔥${state.streak}</div>
+        <div class="hud-streak-lbl">série</div>
+      </div>
+    </div>
+
+    ${state.leveledUp ? `
+      <div class="levelup-banner">
+        <div class="big">⭐ LEVEL UP ⭐</div>
+        <div class="sm">Te voilà ${state.leveledUp}. Le compilo tremble un peu plus.</div>
+      </div>` : ''}
+
+    ${state.toast ? `
+      <div class="achievement-toast">
+        <span class="ico">${state.toast.ico}</span>
+        <span class="txt"><b>Trophée débloqué : ${state.toast.name}</b>${state.toast.desc}</span>
+      </div>` : ''}
+
+    <div class="mode-switch">
+      <button class="mode-btn ${state.mode==='gym'?'active':''}" onclick="setMode('gym')">🏋️ Grind</button>
+      <button class="mode-btn ${state.mode==='cards'?'active':''}" onclick="setMode('cards')">🗂️ Flashcards</button>
+    </div>
+
+    <button class="trophy-btn" onclick="toggleTrophies()">${state.showTrophies?'masquer':'voir'} les trophées (${state.unlocked.size}/${ACHIEVEMENTS.length})</button>
+    ${state.showTrophies ? renderTrophies() : ''}
+
+    ${state.mode==='gym' ? renderGym() : renderCards()}
+      </div></div>
+    </div>
+  `;
+  const input = document.getElementById('gymInput');
+  if(input){
+    input.focus();
+    input.addEventListener('keydown', e => { if(e.key==='Enter') checkGym(); });
+  }
+}
+
+function toggleTrophies(){ state.showTrophies = !state.showTrophies; render(); }
+function renderTrophies(){
+  return `<div class="trophy-grid">
+    ${ACHIEVEMENTS.map(a => `
+      <div class="trophy ${state.unlocked.has(a.id)?'unlocked':''}">
+        <div class="ico">${a.ico}</div>
+        <div class="name">${a.name}</div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function setMode(m){ state.mode = m; render(); }
+
+// ---------------- syntax gym ----------------
+function renderGym(){
+  const realIdx = state.gymOrder[state.gymIdx];
+  const ex = GYM[realIdx];
+  const codeHtml = esc(ex.code).replace('___', '<span class="gym-blank">___</span>');
+
+  let feedbackHtml = '';
+  if(state.gymAnswered){
+    feedbackHtml = `
+      <div class="gym-feedback ${state.gymCorrect?'ok':'ko'}">
+        ${state.gymCorrect ? '✅ ' + state.feedbackLine + ' <span class="gym-xp-gain">+10 XP</span>' : "❌ " + state.feedbackLine}
+        <div class="gym-explain">${ex.explain}</div>
+      </div>
+      <button class="gym-next" onclick="nextGym()">Suivant →</button>
+    `;
+  }
+
+  return `
+    <div class="card">
+      <div class="gym-progress">défi ${state.gymIdx+1}/${GYM.length} · complète le code</div>
+      <div class="gym-code">${codeHtml}</div>
+      ${!state.gymAnswered ? `
+        <div class="gym-input-row">
+          <input id="gymInput" class="gym-input mono" placeholder="ta réponse..." autocomplete="off" spellcheck="false">
+          <button class="gym-check" onclick="checkGym()">Check</button>
+        </div>
+        <button class="hint-btn" onclick="showHint()">besoin d'un indice ?</button>
+        <div id="hintZone"></div>
+      ` : ''}
+      ${feedbackHtml}
+    </div>
+  `;
+}
+
+function showHint(){
+  const ex = GYM[state.gymOrder[state.gymIdx]];
+  document.getElementById('hintZone').innerHTML = `<div class="gym-explain" style="margin-top:8px;">💡 ${ex.hint}</div>`;
+}
+
+function checkGym(){
+  const realIdx = state.gymOrder[state.gymIdx];
+  const ex = GYM[realIdx];
+  const input = document.getElementById('gymInput');
+  const val = (input.value || '').trim();
+  const ok = ex.answers.some(a => a.toLowerCase() === val.toLowerCase());
+  state.gymAnswered = true;
+  state.gymCorrect = ok;
+  state.feedbackLine = ok ? randomFrom(OK_LINES) : randomFrom(KO_LINES);
+  if(ok){
+    state.streak++;
+    state.bestStreak = Math.max(state.bestStreak, state.streak);
+    state.solvedGym.add(realIdx);
+    gainXp(10);
+  } else {
+    state.streak = 0;
+  }
+  render();
+}
+
+function nextGym(){
+  state.gymIdx = (state.gymIdx + 1) % GYM.length;
+  if(state.gymIdx === 0) state.gymOrder = shuffledIndices(GYM.length); // reshuffle a chaque tour complet
+  state.gymAnswered = false;
+  render();
+}
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ---------------- flashcards ----------------
+function currentDeck(){
+  return state.cardOrder
+    .map(i => ({i, c: FLASHCARDS[i]}))
+    .filter(x => state.cardCat==='all' || x.c.cat===state.cardCat);
+}
+
+function renderCards(){
+  const deck = currentDeck();
+  const cats = ['all', ...new Set(FLASHCARDS.map(c=>c.cat))];
+  const entry = deck[state.cardIdx] || deck[0];
+
+  const chips = cats.map(c => `
+    <button class="chip ${state.cardCat===c?'active':''}" onclick="setCat('${c}')">${c==='all'?'toutes':c}</button>
+  `).join('');
+
+  if(!entry){
+    return `<div class="deck-filter">${chips}</div><div class="card">Aucune carte dans cette catégorie.</div>`;
+  }
+  const card = entry.c;
+
+  return `
+    <div class="deck-filter">${chips}</div>
+    <div class="flashcard-zone">
+      <div class="flashcard ${state.flipped?'flipped':''}" onclick="flipCard(${entry.i})">
+        <div class="fc-face fc-front">
+          <div class="fc-label">${card.cat}</div>
+          <div class="fc-q">${esc(card.q)}</div>
+          <div class="fc-tap-hint">tape pour retourner</div>
+        </div>
+        <div class="fc-face fc-back">
+          <div class="fc-label">réponse</div>
+          <div class="fc-a">${esc(card.a)}</div>
+        </div>
+      </div>
+    </div>
+    <div class="deck-nav">
+      <button class="deck-btn" onclick="navCard(-1)" ${state.cardIdx===0?'disabled':''}>← Précédente</button>
+      <button class="deck-btn" onclick="navCard(1)" ${state.cardIdx>=deck.length-1?'disabled':''}>Suivante →</button>
+    </div>
+    <div class="deck-count">${state.cardIdx+1} / ${deck.length}</div>
+  `;
+}
+
+function setCat(c){ state.cardCat = c; state.cardIdx = 0; state.flipped = false; render(); }
+function flipCard(realIdx){
+  state.flipped = !state.flipped;
+  if(state.flipped && !state.flippedCards.has(realIdx)){
+    state.flippedCards.add(realIdx);
+    gainXp(5);
+  }
+  render();
+}
+function navCard(d){
+  state.cardIdx = Math.max(0, state.cardIdx + d);
+  state.flipped = false;
+  render();
+}
+
+render();
+state.glitching = true; render(); // petit glitch d'intro, façon Vanellope
+setTimeout(() => { state.glitching = false; render(); }, 700);
+
+</script>
+</body>
+</html>
