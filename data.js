@@ -25,8 +25,8 @@ const STRINGS = {
                   fr:"La console affiche une sortie façon vrai compilateur — comme un vrai terminal, ça te tient pas la main et ça te dit pas précisément le souci."},
   rules_timer: {en:"Time limit, keeps running even if you switch exercises.", fr:"Temps limité, continue même si tu changes d'exercice."},
   rules_cta: {en:"Start", fr:"C'est parti"},
-  rules_note: {en:"⚠️ The console is an AI-simulated Go compiler — not a real one running in your browser. Very reliable for exercises like these, but it's still a simulation.",
-               fr:"⚠️ La console est un compilo Go simulé par IA — pas un vrai compilo dans le navigateur. Très fiable sur ce genre d'exos, mais ça reste une simulation."},
+  rules_note: {en:"⚠️ The console runs a real Go compiler on the server side (not in your browser) — real compiler errors, real output.",
+               fr:"⚠️ La console fait tourner un vrai compilateur Go côté serveur (pas dans ton navigateur) — vraies erreurs de compilo, vraie sortie."},
   change_level: {en:"← change level", fr:"← changer de niveau"},
 
   // -- ecran exam : editeur + console --
@@ -43,8 +43,8 @@ const STRINGS = {
   no_main: {en:"This exercise is a full standalone program — you write everything in main.go, there's no separate function file.",
             fr:"Cet exercice est un programme autonome complet — tu écris tout dans main.go, y'a pas de fichier fonction séparé."},
   empty_output: {en:"(empty output)", fr:"(sortie vide)"},
-  cors_error: {en:"🔌 Could not reach the compiler function. Check your connection, or make sure the Supabase Edge Function is deployed and GEMINI_API_KEY is set.",
-               fr:"🔌 Impossible de contacter le compilo. Vérifie ta connexion, ou vérifie que l'Edge Function est bien déployée sur Supabase avec la variable GEMINI_API_KEY configurée."},
+  cors_error: {en:"🔌 Could not reach the compiler server. Check your connection, or make sure the compiler service is running on AlwaysData.",
+               fr:"🔌 Impossible de contacter le serveur du compilo. Vérifie ta connexion, ou vérifie que le service compilo tourne bien sur AlwaysData."},
 
   // -- mode True Exam --
   te_restart: {en:"restart", fr:"restart"},
