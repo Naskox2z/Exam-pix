@@ -1,34 +1,43 @@
-/* styles.css -- que du style, zero logique/contenu */
+/* styles.css -- que du style, zero logique/contenu.
+   Theme arcade/01 : panneaux a coins coupes, scanlines, police pixel
+   en accent -- meme famille visuelle que GRIND.GO. */
 
 :root {
   --bg: #0F0B14;
   --panel: #1B1420;
   --panel2: #251B2C;
-  --coral: #FF4D6D;   /* couleur principale, boutons importants */
-  --gold: #FFC857;    /* accent, timer choisi, mots-cles */
-  --teal: #3ECFB2;    /* succes / bouton Run */
-  --ink: #F5EFEA;      /* texte principal */
-  --dim: #B4A6B8;      /* texte secondaire */
-  --err: #FF6B6B;      /* erreur */
+  --coral: #FF4D6D;
+  --gold: #FFC857;
+  --teal: #3ECFB2;
+  --ink: #F5EFEA;
+  --dim: #B4A6B8;
+  --err: #FF6B6B;
   --ok: #3ECFB2;
+  --xp: #8B5CF6;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  min-height: 100%;
-}
+html, body { margin: 0; padding: 0; min-height: 100%; }
 
 body {
-  background: radial-gradient(1100px 700px at 50% -8%, #2A1830 0%, var(--bg) 55%); /* petit degrade en haut, pas plat */
+  background: radial-gradient(1100px 700px at 50% -8%, #2A1830 0%, var(--bg) 55%);
   color: var(--ink);
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+/* scanlines discretes -- l'ambiance "vieil ecran" sans nuire a la lisibilite */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.1) 0px, rgba(0,0,0,.1) 1px, transparent 1px, transparent 3px);
+  opacity: .3;
 }
 
 .wrap {
@@ -36,10 +45,13 @@ body {
   margin: 0 auto;
   padding: 18px 16px 60px;
   min-height: 100vh;
+  position: relative;
+  z-index: 1;
 }
 
-.serif { font-family: 'Fraunces', serif; } /* la police a caractere, pour les titres */
+.serif { font-family: 'Fraunces', serif; }
 .mono { font-family: 'JetBrains Mono', monospace; }
+.pixel-font { font-family: 'Press Start 2P', monospace; } /* juste pour les accents courts */
 h1, h2, h3 { margin: 0; }
 
 button {
@@ -48,9 +60,21 @@ button {
   border: none;
 }
 
+button:active { transform: translateY(1px); } /* petit "clic" arcade */
+
 button:focus-visible, textarea:focus-visible {
-  outline: 2px solid var(--teal); /* contour visible au clavier */
+  outline: 2px solid var(--teal);
   outline-offset: 2px;
+}
+
+/* coins coupes en escalier, façon fenetre de dialogue RPG -- reutilise partout */
+.pixel-panel {
+  clip-path: polygon(
+    0 10px, 10px 10px, 10px 0,
+    calc(100% - 10px) 0, calc(100% - 10px) 10px, 100% 10px,
+    100% calc(100% - 10px), calc(100% - 10px) calc(100% - 10px), calc(100% - 10px) 100%,
+    10px 100%, 10px calc(100% - 10px), 0 calc(100% - 10px)
+  );
 }
 
 /* -------- lang switch EN/FR, en haut a droite -------- */
@@ -63,11 +87,10 @@ button:focus-visible, textarea:focus-visible {
 
 .lang-btn {
   padding: 5px 11px;
-  border-radius: 8px;
   background: var(--panel);
-  border: 1px solid var(--panel2);
+  border: 2px solid var(--panel2);
   color: var(--dim);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
 }
@@ -80,28 +103,28 @@ button:focus-visible, textarea:focus-visible {
 
 /* -------- titres generiques -------- */
 .eyebrow {
-  font-size: 10px;
-  letter-spacing: .1em;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  letter-spacing: .05em;
   color: var(--teal);
-  text-transform: uppercase;
 }
 
 .title {
   font-family: 'Fraunces', serif;
-  font-size: 28px;
-  margin-top: 8px;
-  line-height: 1.25;
+  font-size: 26px;
+  margin-top: 10px;
+  line-height: 1.3;
   font-weight: 600;
 }
 
 .title.glow {
-  text-shadow: 0 0 24px rgba(255, 77, 109, .35); /* petite lueur corail derriere le titre */
+  text-shadow: 0 0 18px rgba(255, 77, 109, .45);
 }
 
 .sub {
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--dim);
-  margin-top: 10px;
+  margin-top: 12px;
   line-height: 1.6;
   max-width: 640px;
 }
@@ -116,11 +139,10 @@ button:focus-visible, textarea:focus-visible {
 .cat-btn, .mode-btn {
   flex: 1;
   padding: 11px;
-  border-radius: 12px;
   background: var(--panel);
-  border: 1.5px solid var(--panel2);
+  border: 2px solid var(--panel2);
   color: var(--dim);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
 }
 
@@ -135,9 +157,8 @@ button:focus-visible, textarea:focus-visible {
   font-size: 12.5px;
   color: var(--dim);
   background: var(--panel);
-  border-left: 3px solid var(--gold); /* juste sur l'onglet Cursus */
+  border-left: 3px solid var(--gold);
   padding: 10px 14px;
-  border-radius: 8px;
   line-height: 1.5;
 }
 
@@ -155,31 +176,30 @@ button:focus-visible, textarea:focus-visible {
   gap: 14px;
 }
 
+/* hexagone, meme motif que le badge de niveau de GRIND.GO */
 .lvl-dot {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--panel2);
+  width: 46px;
+  height: 46px;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: linear-gradient(135deg, var(--xp), #C084FC);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Fraunces', serif;
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--gold);
-  border: 1.5px solid rgba(255, 200, 87, .3);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 12px;
+  color: #fff;
 }
 
 .lvl-btn {
   flex: 1;
   text-align: left;
   background: var(--panel);
-  border: 1.5px solid var(--panel2);
-  border-radius: 14px;
+  border: 2px solid var(--panel2);
   padding: 14px 16px;
   color: var(--ink);
-  transition: transform .12s ease, border-color .12s ease; /* petit mouvement au survol */
+  transition: transform .12s ease, border-color .12s ease;
 }
 
 .lvl-btn:hover {
@@ -203,13 +223,13 @@ button:focus-visible, textarea:focus-visible {
   font-size: 10.5px;
   color: var(--teal);
   margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* -------- rules : carte generique reutilisee -------- */
 .card {
   background: var(--panel);
-  border: 1.5px solid var(--panel2);
-  border-radius: 16px;
+  border: 2px solid var(--panel2);
   padding: 20px;
 }
 
@@ -231,9 +251,8 @@ button:focus-visible, textarea:focus-visible {
 
 .chip {
   padding: 8px 14px;
-  border-radius: 20px;
   background: var(--panel2);
-  border: 1.5px solid transparent;
+  border: 2px solid transparent;
   color: var(--ink);
   font-size: 13px;
   font-family: 'JetBrains Mono', monospace;
@@ -248,16 +267,13 @@ button:focus-visible, textarea:focus-visible {
 .cta {
   width: 100%;
   padding: 15px;
-  border-radius: 14px;
   background: linear-gradient(135deg, var(--coral), #ff7a92);
   color: #1a0d10;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 14px;
   margin-top: 18px;
-}
-
-.cta:active {
-  transform: scale(.98); /* petit clic visuel */
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: .03em;
 }
 
 .ghost {
@@ -289,7 +305,7 @@ button:focus-visible, textarea:focus-visible {
 
 .timer.warn {
   color: var(--err);
-  animation: pulse 1s infinite; /* clignote sous les 5 min */
+  animation: pulse 1s infinite;
 }
 
 @keyframes pulse {
@@ -307,22 +323,21 @@ button:focus-visible, textarea:focus-visible {
   justify-content: space-between;
   align-items: center;
   background: var(--panel);
-  border: 1.5px solid var(--panel2);
-  border-radius: 14px;
+  border: 2px solid var(--panel2);
   padding: 14px 16px;
   margin-bottom: 14px;
 }
 
 .te-title {
-  font-family: 'Fraunces', serif;
-  font-weight: 600;
-  font-size: 16px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
 }
 
 .te-status {
   font-size: 12px;
   color: var(--dim);
-  margin-top: 2px;
+  margin-top: 6px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .te-actions {
@@ -332,7 +347,6 @@ button:focus-visible, textarea:focus-visible {
 
 .btn-small {
   padding: 8px 14px;
-  border-radius: 10px;
   background: var(--panel2);
   color: var(--ink);
   font-size: 12px;
@@ -348,7 +362,7 @@ button:focus-visible, textarea:focus-visible {
 }
 
 .exam-grid > * {
-  min-width: 0; /* sans ca, le code trop large fait deborder toute la page */
+  min-width: 0;
 }
 
 @media (min-width: 900px) {
@@ -357,8 +371,7 @@ button:focus-visible, textarea:focus-visible {
 
 .consigne {
   background: var(--panel);
-  border: 1.5px solid var(--panel2);
-  border-radius: 14px;
+  border: 2px solid var(--panel2);
   padding: 18px;
   max-height: 520px;
   overflow: auto;
@@ -378,7 +391,6 @@ button:focus-visible, textarea:focus-visible {
   color: var(--ink);
 }
 
-/* rendu du markdown des 59 enonces */
 .ex-html h2 {
   font-family: 'Fraunces', serif;
   font-size: 19px;
@@ -401,7 +413,6 @@ button:focus-visible, textarea:focus-visible {
 .ex-html code {
   background: var(--panel2);
   padding: 1px 5px;
-  border-radius: 4px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
   color: var(--gold);
@@ -409,10 +420,10 @@ button:focus-visible, textarea:focus-visible {
 
 .ex-html pre {
   background: #0C0812;
-  border-radius: 10px;
   padding: 12px;
   overflow: auto;
   margin: 10px 0;
+  border: 1px solid #000;
 }
 
 .ex-html pre code {
@@ -439,8 +450,7 @@ button:focus-visible, textarea:focus-visible {
 
 .editor-box {
   background: #0C0812;
-  border: 1.5px solid var(--panel2);
-  border-radius: 14px;
+  border: 2px solid var(--panel2);
   overflow: hidden;
   min-width: 0;
 }
@@ -481,14 +491,13 @@ textarea.code, pre.code {
   margin: 0;
 }
 
-textarea.code { tab-size: 2; } /* ton fichier, editable */
-pre.code { color: #8B7C90; }   /* main.go, lecture seule, plus terne expres */
+textarea.code { tab-size: 2; }
+pre.code { color: #8B7C90; }
 
 /* -------- exam : console (bouton Run) -------- */
 .term-box {
   background: #0A0710;
-  border: 1.5px solid var(--panel2);
-  border-radius: 14px;
+  border: 2px solid var(--panel2);
   margin-top: 12px;
   overflow: hidden;
 }
@@ -513,7 +522,7 @@ pre.code { color: #8B7C90; }   /* main.go, lecture seule, plus terne expres */
   font-weight: 700;
   font-size: 12px;
   padding: 7px 12px;
-  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .run-btn:disabled { opacity: .5; }
@@ -524,8 +533,8 @@ pre.code { color: #8B7C90; }   /* main.go, lecture seule, plus terne expres */
   font-weight: 700;
   font-size: 12px;
   padding: 7px 12px;
-  border-radius: 8px;
   margin-left: 6px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .submit-btn:disabled { opacity: .5; }
@@ -561,24 +570,24 @@ pre.code { color: #8B7C90; }   /* main.go, lecture seule, plus terne expres */
 
 .submit-panel {
   margin-top: 12px;
-  border-radius: 14px;
   padding: 16px;
-  animation: popIn .25s ease; /* petit pop d'apparition, rien de plus */
+  animation: popIn .25s ease;
+  border: 2px solid;
 }
 
 .submit-panel.ok {
   background: rgba(62, 207, 178, .1);
-  border: 1.5px solid rgba(62, 207, 178, .4);
+  border-color: rgba(62, 207, 178, .5);
 }
 
 .submit-panel.ko {
   background: rgba(255, 107, 107, .1);
-  border: 1.5px solid rgba(255, 107, 107, .4);
+  border-color: rgba(255, 107, 107, .5);
 }
 
 .submit-panel.pending {
   background: var(--panel);
-  border: 1.5px solid var(--panel2);
+  border-color: var(--panel2);
 }
 
 .submit-status {
@@ -600,7 +609,7 @@ pre.code { color: #8B7C90; }   /* main.go, lecture seule, plus terne expres */
   height: 8px;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 8px currentColor; /* le petit glow, comme le vrai intranet */
+  box-shadow: 0 0 8px currentColor;
 }
 
 .submit-funny {
@@ -621,11 +630,10 @@ pre.code { color: #8B7C90; }   /* main.go, lecture seule, plus terne expres */
 .nav-btn {
   flex: 1;
   padding: 13px;
-  border-radius: 12px;
   background: var(--panel);
   color: var(--ink);
   font-size: 13px;
-  border: 1.5px solid var(--panel2);
+  border: 2px solid var(--panel2);
 }
 
 .nav-btn:disabled { opacity: .3; }
@@ -641,7 +649,6 @@ pre.code { color: #8B7C90; }   /* main.go, lecture seule, plus terne expres */
 .dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
   background: var(--panel2);
 }
 
